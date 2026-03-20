@@ -1,0 +1,45 @@
+# Deploy Bot on Render.com (FREE)
+
+## Step 1: Preparare il codice
+
+Il codice è già pronto nella cartella `telegram-download-bot/`.
+
+## Step 2: Carica su GitHub
+
+1. Crea un nuovo repo su GitHub
+2. Carica tutti i file della cartella `telegram-download-bot/`:
+   - bot.py
+   - requirements.txt
+
+## Step 3: Deploy su Render
+
+1. Vai su https://render.com e accedi con GitHub
+2. Clicca "New +" → "Web Service"
+3. Collega il tuo repo GitHub
+4. Configura:
+   - Name: telegram-download-bot
+   - Runtime: Python 3
+   - Build Command: (lascia vuoto)
+   - Start Command: `python bot.py`
+5. Clicca "Create Web Service"
+
+## Step 4: Configura variabile ambiente
+
+1. Nel pannello Render, vai su "Environment"
+2. Aggiungi una variabile:
+   - Key: `BOT_TOKEN`
+   - Value: `8671214452:AAHibVHglzUVRJW9EV32GMs46VOdiVpKGSs`
+
+3. Clicca "Deploy"
+
+## Step 5: Attendi il deploy
+
+Dopo il deploy, il bot sarà online 24/7 gratuitamente!
+
+---
+
+## Nota importante
+
+Il piano gratuito di Render mette il bot in sleep dopo 15 minuti di inattività. Al primo messaggio si "sveglia" in ~30 secondi.
+
+Se vuoi un bot sempre attivo, serve il piano a pagamento ($7/mese) oppure usa un altro servizio.
