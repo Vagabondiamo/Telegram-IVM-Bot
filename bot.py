@@ -178,22 +178,8 @@ def main():
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    # Get the webhook URL from environment (Render provides it)
-    import os
-    webhook_url = os.environ.get("RENDER_EXTERNAL_URL")
-    
-    if webhook_url:
-        print(f"🔗 Using webhook: {webhook_url}")
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=10000,
-            url_path="webhook",
-            webhook_url=f"{webhook_url}/webhook",
-            drop_pending_updates=True
-        )
-    else:
-        print("✅ Bot pronto! (polling mode)")
-        app.run_polling(drop_pending_updates=True)
+    print("✅ Bot pronto!")
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
