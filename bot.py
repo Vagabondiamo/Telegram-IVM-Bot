@@ -31,14 +31,20 @@ async def get_media_info(url: str):
         'ignoreerrors': False,
         'no_color': True,
         'noplaylist': True,
-        'extractor_args': {'youtube': {'player_client': ['mweb']}}, # Forza client mobile
-        'user_agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+        # Configurazione suggerita dalle FAQ per bypassare i blocchi bot su server
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web'],
+                'player_skip_subscribe_check': True,
+            }
+        },
+        'user_agent': 'com.google.android.youtube/19.29.37 (Linux; U; Android 11) gzip'
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             if info is None:
-                return {'success': False, 'error': "Could not extract info. The video might be restricted or private."}
+                return {'success': False, 'error': "Could not extract info. YouTube is blocking this request."}
             
             formats = info.get('formats', [])
             has_video = any(f.get('vcodec') != 'none' for f in formats) if formats else False
@@ -61,8 +67,13 @@ async def download_media(url: str, mode: str = 'video'):
         'nocheckcertificate': True,
         'no_color': True,
         'noplaylist': True,
-        'extractor_args': {'youtube': {'player_client': ['mweb']}}, # Forza client mobile
-        'user_agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web'],
+                'player_skip_subscribe_check': True,
+            }
+        },
+        'user_agent': 'com.google.android.youtube/19.29.37 (Linux; U; Android 11) gzip'
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
