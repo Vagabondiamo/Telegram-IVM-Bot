@@ -82,8 +82,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Hi! Send me a link and I'll download the file!\n\n"
         "📱 YouTube, Pinterest, Instagram, TikTok and more.\n\n"
-        "🎬 Video: choose format\n"
-        "🎵 Audio: direct download\n\n"
+        "🎬 Video\n"
+        "🎵 Audio\n\n"
         "Use /support for issues or feature requests"
     )
 
