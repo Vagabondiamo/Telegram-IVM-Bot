@@ -27,11 +27,13 @@ async def get_media_info(url: str):
         'quiet': True, 
         'no_warnings': True, 
         'extract_flat': False,
-        'cookiefile': None,
         'nocheckcertificate': True,
-        'ignoreerrors': False, # Cambiato a False per catturare meglio l'errore
+        'ignoreerrors': False,
         'no_color': True,
-        'noplaylist': True, # Evita problemi con le playlist
+        'noplaylist': True,
+        'username': 'oauth2', # Abilita login via OAuth2
+        'password': '',       # Richiesto per OAuth2
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -60,6 +62,9 @@ async def download_media(url: str, mode: str = 'video'):
         'nocheckcertificate': True,
         'no_color': True,
         'noplaylist': True,
+        'username': 'oauth2', # Abilita login via OAuth2
+        'password': '',
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
