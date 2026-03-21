@@ -31,9 +31,8 @@ async def get_media_info(url: str):
         'ignoreerrors': False,
         'no_color': True,
         'noplaylist': True,
-        'username': 'oauth2', # Abilita login via OAuth2
-        'password': '',       # Richiesto per OAuth2
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'extractor_args': {'youtube': {'player_client': ['mweb']}}, # Forza client mobile
+        'user_agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -62,9 +61,8 @@ async def download_media(url: str, mode: str = 'video'):
         'nocheckcertificate': True,
         'no_color': True,
         'noplaylist': True,
-        'username': 'oauth2', # Abilita login via OAuth2
-        'password': '',
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'extractor_args': {'youtube': {'player_client': ['mweb']}}, # Forza client mobile
+        'user_agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
