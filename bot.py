@@ -27,17 +27,24 @@ async def get_media_info(url: str):
         'quiet': True, 
         'no_warnings': True, 
         'extract_flat': False,
-        'cookiefile': None, # Può essere usato un file .txt se necessario
+        'cookiefile': None,
         'nocheckcertificate': True,
-        'ignoreerrors': True,
+        'ignoreerrors': False, # Cambiato a False per catturare meglio l'errore
         'no_color': True,
+        'noplaylist': True, # Evita problemi con le playlist
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
+            if info is None:
+                return {'success': False, 'error': "Could not extract info. The video might be restricted or private."}
+            
+            formats = info.get('formats', [])
+            has_video = any(f.get('vcodec') != 'none' for f in formats) if formats else False
+            
             return {
                 'title': info.get('title', 'Media'),
-                'has_video': any(f.get('vcodec') != 'none' for f in info.get('formats', [])),
+                'has_video': has_video,
                 'success': True
             }
     except Exception as e:
@@ -52,14 +59,19 @@ async def download_media(url: str, mode: str = 'video'):
         'no_warnings': True,
         'nocheckcertificate': True,
         'no_color': True,
+        'noplaylist': True,
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
+            if info is None:
+                return None, None, "Download failed: info is None"
+            
             filename = ydl.prepare_filename(info)
             if mode == 'audio':
                 new_name = filename.rsplit('.', 1)[0] + '.mp3'
-                os.rename(filename, new_name)
+                if os.path.exists(filename):
+                    os.rename(filename, new_name)
                 filename = new_name
             return filename, info.get('title', 'video'), None
     except Exception as e:
