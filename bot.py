@@ -125,25 +125,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     url = url_match.group()
-    await update.message.reply_text("🔍 Analyzing...")
+    is_group = update.effective_chat.type in ['group', 'supergroup']
+    
+    if is_group:
+        try:
+            # Aggiunge emoji di analisi (lente di ingrandimento)
+            await update.message.set_reaction(reaction="🔍")
+        except:
+            pass # Se non ha i permessi, ignora
+    else:
+        await update.message.reply_text("🔍 Analyzing...")
     
     info = await get_media_info(url)
     if not info.get('success'):
-        await update.message.reply_text(f"❌ Error: {info.get('error')}")
+        if not is_group:
+            await update.message.reply_text(f"❌ Error: {info.get('error')}")
         return
     
     title = info.get('title', 'Media')
     user_data[user_id] = {'url': url, 'title': title}
     
     # --- MODIFICA PER GRUPPI: Download automatico video ---
-    is_group = update.effective_chat.type in ['group', 'supergroup']
-    
     if is_group:
-        await update.message.reply_text("📹 Group detected: Downloading video...")
         file_path, title, error = await download_media(url, 'video')
-        if error:
-            await update.message.reply_text(f"❌ Error: {error}")
-        else:
+        if not error:
             await send_file(update.message, file_path, is_audio=False)
         return
     # ------------------------------------------------------
