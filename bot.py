@@ -8,6 +8,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, CallbackQueryHandler, filters, ContextTypes
 import yt_dlp
 
+import random
+
 # ========== CONFIGURAZIONE ==========
 import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8671214452:AAHibVHglzUVRJW9EV32GMs46VOdiVpKGSs")
@@ -129,9 +131,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if is_group:
         try:
-            # Aggiunge emoji di analisi (lente di ingrandimento)
-            await update.message.set_reaction(reaction="🔍")
-        except:
+            # Sceglie un'emoji casuale tra quelle richieste
+            emojis = ["👍", "🫡", "👀", "✍️"]
+            chosen_emoji = random.choice(emojis)
+            await update.message.set_reaction(reaction=chosen_emoji)
+        except Exception as e:
+            print(f"Error set_reaction: {e}")
             pass # Se non ha i permessi, ignora
     else:
         await update.message.reply_text("🔍 Analyzing...")
