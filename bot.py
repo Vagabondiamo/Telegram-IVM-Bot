@@ -21,7 +21,15 @@ user_data = {}
 
 async def get_media_info(url: str):
     """Ottiene info sul media"""
-    ydl_opts = {'quiet': True, 'no_warnings': True, 'extract_flat': False}
+    ydl_opts = {
+        'quiet': True, 
+        'no_warnings': True, 
+        'extract_flat': False,
+        'cookiefile': None, # Può essere usato un file .txt se necessario
+        'nocheckcertificate': True,
+        'ignoreerrors': True,
+        'no_color': True,
+    }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -40,6 +48,8 @@ async def download_media(url: str, mode: str = 'video'):
         'outtmpl': f'{DOWNLOAD_DIR}/%(title)s.%(ext)s',
         'quiet': True,
         'no_warnings': True,
+        'nocheckcertificate': True,
+        'no_color': True,
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
