@@ -135,6 +135,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     title = info.get('title', 'Media')
     user_data[user_id] = {'url': url, 'title': title}
     
+    # --- MODIFICA PER GRUPPI: Download automatico video ---
+    is_group = update.effective_chat.type in ['group', 'supergroup']
+    
+    if is_group:
+        await update.message.reply_text("📹 Group detected: Downloading video...")
+        file_path, title, error = await download_media(url, 'video')
+        if error:
+            await update.message.reply_text(f"❌ Error: {error}")
+        else:
+            await send_file(update.message, file_path, is_audio=False)
+        return
+    # ------------------------------------------------------
+
     if not info.get('has_video'):
         # Audio only
         await update.message.reply_text("🎵 Downloading audio...")
