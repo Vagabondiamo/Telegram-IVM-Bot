@@ -19,9 +19,45 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 user_data = {}
 
-# ========== FUNZIONI ==========
+import httpx
 
-async def get_media_info(url: str):
+async def download_media_cobalt(url: str):
+    """Scarica media usando l'API di Cobalt (alternativa a yt-dlp)"""
+    api_url = "https://api.cobalt.tools/api/json"
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "url": url,
+        "videoQuality": "720", # Qualità bilanciata
+        "filenameStyle": "pretty"
+    }
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(api_url, json=payload, headers=headers, timeout=60.0)
+            data = response.json()
+            
+            if data.get("status") == "stream":
+                # Scarica il file dal link fornito da Cobalt
+                stream_url = data.get("url")
+                filename = f"{DOWNLOAD_DIR}/video_{random.randint(1000,9999)}.mp4"
+                
+                async with client.get(stream_url, timeout=120.0) as r:
+                    with open(filename, 'wb') as f:
+                        f.write(r.content)
+                return filename, data.get("filename", "video"), None
+            
+            elif data.get("status") == "error":
+                return None, None, data.get("text")
+            else:
+                return None, None, "Unexpected Cobalt response status"
+                
+    except Exception as e:
+        return None, None, f"Cobalt Error: {str(e)}"
+
+# Sostituisco le chiamate nel codice principale
     """Ottiene info sul media"""
     ydl_opts = {
         'quiet': True, 
@@ -178,7 +214,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # --- MODIFICA PER GRUPPI: Download automatico video ---
     if is_group:
-        file_path, title, error = await download_media(url, 'video')
+        file_path, title, error = await download_media_cobalt(url) # Usa Cobalt
         if not error:
             await send_file(update.message, file_path, is_audio=False)
         return
@@ -219,7 +255,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = user_data[user_id]['url']
     
     await query.edit_message_text("⬇️ Downloading...")
-    file_path, title, error = await download_media(url, choice)
+    # Usa Cobalt per il download diretto (se video)
+    if choice == "video":
+        file_path, title, error = await download_media_cobalt(url)
+    else:
+        file_path, title, error = await download_media(url, choice)
     
     if error:
         await query.message.reply_text(f"❌ Error: {error}")
