@@ -97,14 +97,14 @@ async def run_download_social(url: str, mode: str):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📱 **Social Downloader V3.0**\n\n"
+        "📱 Social Downloader V3.0\n\n"
         "Incolla un link da:\n"
         "• Instagram\n"
         "• TikTok\n"
         "• Pinterest\n"
         "• Twitter/X\n"
         "• Facebook\n\n"
-        "⚠️ *Nota: YouTube non è supportato su questo bot.*"
+        "⚠️ Nota: YouTube non è supportato su questo bot."
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
