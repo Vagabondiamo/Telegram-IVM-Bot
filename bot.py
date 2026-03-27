@@ -1,7 +1,6 @@
 """
-Telegram Bot Downloader V2.3
-YouTube -> Usa API esterne (Cobalt) per bypassare i blocchi IP.
-Social -> Usa yt-dlp locale per massima compatibilità.
+Telegram Bot Downloader V2.4
+Multi-fallback: Cobalt (Siti Esterni) -> yt-dlp locale.
 """
 
 import os
@@ -37,11 +36,13 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", "8671214452:AAHibVHglzUVRJW9EV32GMs46VOd
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-# Istanze "Siti Web" (Cobalt API) per YouTube
+# Lista aggiornata di istanze Cobalt (Siti esterni di download)
 COBALT_INSTANCES = [
     "https://api.cobalt.tools/api/json",
+    "https://cobalt-api.v0.pw/api/json",
+    "https://api.cobalt.red/api/json",
     "https://cobalt.api.slashr.xyz/api/json",
-    "https://cobalt-api.v0.pw/api/json"
+    "https://cobalt.perisic.com/api/json"
 ]
 
 user_data = {}
@@ -61,11 +62,10 @@ def run_health_check():
 # ========== STRUMENTI DI DOWNLOAD ==========
 
 def is_youtube(url):
-    """Controlla se il link è di YouTube"""
     return "youtube.com" in url.lower() or "youtu.be" in url.lower()
 
 async def run_download_cobalt(url: str, mode: str):
-    """Scarica tramite sito esterno (Cobalt) - Perfetto per YouTube"""
+    """Tentativo tramite siti esterni (Cobalt)"""
     is_audio = (mode == 'audio')
     payload = {
         "url": url, 
@@ -73,16 +73,20 @@ async def run_download_cobalt(url: str, mode: str):
         "filenameStyle": "pretty",
         "isAudioOnly": is_audio
     }
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    # User-Agent reale per non essere bloccati da Cobalt
+    headers = {
+        "Accept": "application/json", 
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
     
     for api_url in COBALT_INSTANCES:
         try:
-            logger.info(f"Tentativo YouTube via Cobalt: {api_url}")
+            logger.info(f"Tentativo YouTube via: {api_url}")
             async with httpx.AsyncClient() as client:
-                response = await client.post(api_url, json=payload, headers=headers, timeout=25.0)
-                if response.status_code != 200: continue
-                
+                response = await client.post(api_url, json=payload, headers=headers, timeout=20.0)
                 data = response.json()
+                
                 if data.get("status") == "stream":
                     stream_url = data.get("url")
                     ext = "mp3" if is_audio else "mp4"
@@ -90,24 +94,29 @@ async def run_download_cobalt(url: str, mode: str):
                     file_path = os.path.join(DOWNLOAD_DIR, f"{title}.{ext}")
                     
                     async with client.get(stream_url, timeout=120.0) as r:
-                        with open(file_path, 'wb') as f:
-                            f.write(r.content)
-                    return file_path, title, None
+                        if r.status_code == 200:
+                            with open(file_path, 'wb') as f:
+                                f.write(r.content)
+                            return file_path, title, None
+                else:
+                    logger.warning(f"Cobalt ({api_url}) ha risposto: {data.get('text', 'No error text')}")
         except Exception as e:
-            logger.warning(f"Istanza Cobalt fallita: {api_url} - {str(e)}")
+            logger.warning(f"Errore istanza {api_url}: {str(e)}")
             continue
-    return None, None, "Sito di download esterno non disponibile al momento."
+    return None, None, "Siti esterni non disponibili."
 
 async def run_download_ytdl(url: str, mode: str):
-    """Scarica tramite yt-dlp locale - Ottimo per Instagram/TikTok/ecc."""
+    """Tentativo locale tramite yt-dlp"""
     opts = {
         'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best' if mode != 'audio' else 'bestaudio/best',
         'outtmpl': f'{DOWNLOAD_DIR}/%(title)s.%(ext)s',
         'quiet': True,
         'no_warnings': True,
-        'merge_output_format': 'mp4' if mode != 'audio' else None,
+        'nocheckcertificate': True,
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     }
+    if os.path.exists("cookies.txt"):
+        opts['cookiefile'] = "cookies.txt"
     if mode == 'audio':
         opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}]
 
@@ -118,7 +127,6 @@ async def run_download_ytdl(url: str, mode: str):
             filename = ydl.prepare_filename(info)
             if mode == 'audio': filename = os.path.splitext(filename)[0] + ".mp3"
             
-            # Fix estensione se mp4 non esiste
             if not os.path.exists(filename):
                 for e in ['.mp4', '.mkv', '.webm', '.mp3']:
                     if os.path.exists(os.path.splitext(filename)[0] + e):
@@ -131,7 +139,7 @@ async def run_download_ytdl(url: str, mode: str):
 # ========== HANDLERS TELEGRAM ==========
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🚀 **Downloader V2.3 Online!**\n\nYouTube via Sito Esterno 🌐\nSocial via Local Download 📱")
+    await update.message.reply_text("🚀 **Downloader V2.4 pronto!**\nIncolla un link per scaricare video o audio.")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
@@ -139,16 +147,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not url_match: return
     
     url = url_match.group()
-    sent_msg = await update.message.reply_text("🔍 Analisi link...")
-    
-    # Per semplicità, consideriamo il titolo "Media" se l'analisi fallisce
     user_data[update.message.from_user.id] = {'url': url}
     
-    keyboard = [
-        [InlineKeyboardButton("📹 Video (MP4)", callback_data="video"),
-         InlineKeyboardButton("🎵 Audio (MP3)", callback_data="audio")]
-    ]
-    await sent_msg.edit_text("✅ Link pronto! Cosa vuoi scaricare?", reply_markup=InlineKeyboardMarkup(keyboard))
+    keyboard = [[InlineKeyboardButton("📹 Video", callback_data="video"),
+                 InlineKeyboardButton("🎵 Audio", callback_data="audio")]]
+    await update.message.reply_text("✅ Link rilevato! Scegli il formato:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -163,21 +166,21 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = user_data[user_id]['url']
     await query.edit_message_text(f"⏳ Download in corso ({choice})...")
     
-    # LOGICA DI SMISTAMENTO
-    if is_youtube(url):
-        # USA SITO WEB ESTERNO (COBALT) PER YOUTUBE
-        file_path, title, error = await run_download_cobalt(url, choice)
-    else:
-        # USA YT-DLP LOCALE PER ALTRI SOCIAL
+    # 1. Prova prima con i siti esterni (Cobalt)
+    file_path, title, error = await run_download_cobalt(url, choice)
+    
+    # 2. Se fallisce, prova yt-dlp locale (ottimo se hai caricato i cookies)
+    if not file_path:
+        logger.info("Siti esterni falliti, provo download locale...")
         file_path, title, error = await run_download_ytdl(url, choice)
     
-    if error:
-        await query.message.reply_text(f"❌ Errore: {error[:200]}")
+    if error and not file_path:
+        await query.message.reply_text(f"❌ Errore: {error[:200]}\n\n💡 Se è YouTube, i server sono bloccati. Carica un file cookies.txt per risolvere.")
         return
 
     # Limite 50MB
     if os.path.getsize(file_path) > 50 * 1024 * 1024:
-        await query.message.reply_text("⚠️ File troppo grande per Telegram (>50MB).")
+        await query.message.reply_text("⚠️ File troppo grande (>50MB).")
         os.remove(file_path)
         return
 
