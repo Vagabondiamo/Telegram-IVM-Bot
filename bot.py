@@ -1,7 +1,6 @@
 """
-Telegram Bot Downloader V3.0 (Social Only)
-Specializzato per: Instagram, TikTok, Pinterest, Twitter/X e altri social.
-YouTube disabilitato per evitare blocchi IP su Render.
+Telegram Bot Downloader V3.1 (Social Only)
+Fully in English. Optimized for Render.com.
 """
 
 import os
@@ -30,14 +29,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ========== CONFIGURAZIONE ==========
+# ========== CONFIGURATION ==========
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8671214452:AAHibVHglzUVRJW9EV32GMs46VOdiVpKGSs")
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 user_data = {}
 
-# ========== HEALTH CHECK PER RENDER ==========
+# ========== HEALTH CHECK FOR RENDER ==========
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -49,18 +48,14 @@ def run_health_check():
     server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
     server.serve_forever()
 
-# ========== DOWNLOAD ENGINE (SOCIAL) ==========
+# ========== DOWNLOAD ENGINE ==========
 
 def is_youtube(url):
-    """Rileva se il link è YouTube"""
     return "youtube.com" in url.lower() or "youtu.be" in url.lower()
 
 async def run_download_social(url: str, mode: str):
-    """Download per i social tramite yt-dlp locale"""
     is_audio = (mode == 'audio')
-    
     opts = {
-        # Max 720p per stare sotto i 50MB di Telegram
         'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best' if not is_audio else 'bestaudio/best',
         'outtmpl': f'{DOWNLOAD_DIR}/%(title)s.%(ext)s',
         'quiet': True,
@@ -68,7 +63,6 @@ async def run_download_social(url: str, mode: str):
         'nocheckcertificate': True,
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     }
-
     if is_audio:
         opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}]
 
@@ -77,34 +71,41 @@ async def run_download_social(url: str, mode: str):
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = await loop.run_in_executor(None, lambda: ydl.extract_info(url, download=True))
             filename = ydl.prepare_filename(info)
-            
-            if is_audio:
-                filename = os.path.splitext(filename)[0] + ".mp3"
-            
-            # Gestione cambio estensione post-merge
+            if is_audio: filename = os.path.splitext(filename)[0] + ".mp3"
             if not os.path.exists(filename):
                 base = os.path.splitext(filename)[0]
                 for ext in ['.mp4', '.mkv', '.webm', '.mp3']:
                     if os.path.exists(base + ext):
                         filename = base + ext
                         break
-            
             return filename, info.get('title', 'Media'), None
     except Exception as e:
         return None, None, str(e)
 
-# ========== HANDLERS TELEGRAM ==========
+# ========== HANDLERS ==========
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📱 Social Downloader V3.0\n\n"
-        "Incolla un link da:\n"
+        "📱 Social Downloader V3.1\n\n"
+        "Paste a link from:\n"
         "• Instagram\n"
         "• TikTok\n"
         "• Pinterest\n"
         "• Twitter/X\n"
         "• Facebook\n\n"
-        "⚠️ Nota: YouTube non è supportato su questo bot."
+        "Use /support for help or requests.\n\n"
+        "⚠️ Note: YouTube is not supported on this bot."
+    )
+
+async def support(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [[InlineKeyboardButton("📤 Contact Owner", url="https://t.me/Vagabondiamo")]]
+    await update.message.reply_text(
+        "📝 Support\n\n"
+        "Click the button below to contact the owner for:\n"
+        "• Reporting a problem\n"
+        "• Requesting new features\n"
+        "• Feedback",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -113,16 +114,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not url_match: return
     
     url = url_match.group()
-    
-    # Blocco YouTube esplicito
     if is_youtube(url):
-        await update.message.reply_text("❌ Mi dispiace, il download da YouTube è disabilitato su questo server a causa dei blocchi IP.")
+        await update.message.reply_text("❌ Sorry, YouTube download is disabled on this server due to IP blocks.")
         return
 
     user_data[update.message.from_user.id] = {'url': url}
     keyboard = [[InlineKeyboardButton("📹 Video", callback_data="video"),
                  InlineKeyboardButton("🎵 Audio", callback_data="audio")]]
-    await update.message.reply_text("✅ Link rilevato! Scegli cosa scaricare:", reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text("✅ Link detected! Choose a format:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -132,34 +131,33 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not url: return
     
     choice = query.data
-    await query.edit_message_text(f"⏳ Download social in corso ({choice})...")
+    await query.edit_message_text(f"⏳ Downloading ({choice})...")
     
     file_path, title, error = await run_download_social(url, choice)
-
     if error:
-        await query.message.reply_text(f"❌ Errore durante il download:\n`{error[:200]}`")
+        await query.message.reply_text(f"❌ Error during download:\n`{error[:200]}`")
         return
 
-    # Limite 50MB
     if os.path.getsize(file_path) > 50 * 1024 * 1024:
-        await query.message.reply_text("⚠️ Il file supera i 50MB (limite di Telegram per i bot).")
+        await query.message.reply_text("⚠️ File too big for Telegram (>50MB).")
         os.remove(file_path)
         return
 
     try:
-        await query.message.reply_text("📤 Invio in corso...")
+        await query.message.reply_text("📤 Uploading...")
         with open(file_path, 'rb') as f:
             if choice == 'audio': await query.message.reply_audio(audio=f, title=title)
             else: await query.message.reply_video(video=f, caption=title)
         os.remove(file_path)
     except Exception as e:
-        await query.message.reply_text(f"❌ Errore nell'invio: {str(e)}")
+        await query.message.reply_text(f"❌ Upload error: {str(e)}")
         if os.path.exists(file_path): os.remove(file_path)
 
 def main():
     threading.Thread(target=run_health_check, daemon=True).start()
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("support", support))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(CallbackQueryHandler(button_callback))
     app.run_polling(drop_pending_updates=True)
