@@ -9,6 +9,7 @@ import logging
 import asyncio
 import threading
 import yt_dlp
+import httpx
 from dotenv import load_dotenv
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -55,26 +56,58 @@ def is_youtube(url):
 
 async def run_download_social(url: str, mode: str):
     is_audio = (mode == 'audio')
+    is_image = (mode == 'image')
+    
     opts = {
-        'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best' if not is_audio else 'bestaudio/best',
         'outtmpl': f'{DOWNLOAD_DIR}/%(title)s.%(ext)s',
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     }
+
     if is_audio:
+        opts['format'] = 'bestaudio/best'
         opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}]
+    elif is_image:
+        opts['format'] = 'best'
+        opts['writethumbnail'] = True
+        opts['skip_download'] = True
+    else:
+        opts['format'] = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best'
 
     try:
         loop = asyncio.get_event_loop()
         with yt_dlp.YoutubeDL(opts) as ydl:
-            info = await loop.run_in_executor(None, lambda: ydl.extract_info(url, download=True))
+            info = await loop.run_in_executor(None, lambda: ydl.extract_info(url, download=not is_image))
+            
+            if is_image:
+                # Try to get the best thumbnail
+                thumbnails = info.get('thumbnails', [])
+                if not thumbnails:
+                    return None, None, "No image found for this link."
+                
+                # Sort thumbnails by preference (resolution/quality)
+                # Some sites provide 'url', some 'filepath'
+                best_thumb = thumbnails[-1]['url']
+                # We need to download this URL
+                async with httpx.AsyncClient() as client:
+                    resp = await client.get(best_thumb)
+                    if resp.status_code == 200:
+                        filename = f"{DOWNLOAD_DIR}/image_{info.get('id', 'temp')}.jpg"
+                        with open(filename, 'wb') as f:
+                            f.write(resp.content)
+                        return filename, info.get('title', 'Image'), None
+                    else:
+                        return None, None, f"Failed to download image: {resp.status_code}"
+
             filename = ydl.prepare_filename(info)
             if is_audio: filename = os.path.splitext(filename)[0] + ".mp3"
+            
+            # Post-processing check for audio/video
             if not os.path.exists(filename):
                 base = os.path.splitext(filename)[0]
-                for ext in ['.mp4', '.mkv', '.webm', '.mp3']:
+                for ext in ['.mp4', '.mkv', '.webm', '.mp3', '.jpg', '.png', '.webp']:
                     if os.path.exists(base + ext):
                         filename = base + ext
                         break
@@ -93,8 +126,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• Pinterest\n"
         "• Twitter/X\n"
         "• Facebook\n\n"
-        "Use /support for help or requests.\n\n"
-        "⚠️ Note: YouTube is not supported on this bot."
+        "🔴 IMPORTANT: YouTube is NOT supported. 🔴\n"
+        "Use /support for help or requests."
     )
 
 async def support(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -104,7 +137,8 @@ async def support(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Click the button below to contact the owner for:\n"
         "• Reporting a problem\n"
         "• Requesting new features\n"
-        "• Feedback",
+        "• Feedback\n\n"
+        "⚠️ Remember: YouTube downloads are NOT available.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -112,15 +146,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     url_match = re.search(r'https?://[^\s]+', text)
     if not url_match: return
-    
+
     url = url_match.group()
     if is_youtube(url):
-        await update.message.reply_text("❌ Sorry, YouTube download is disabled on this server due to IP blocks.")
+        await update.message.reply_text(
+            "❌ ERROR: YouTube downloads are strictly disabled on this bot.\n\n"
+            "Please use links from Instagram, TikTok, Pinterest, Twitter, or Facebook."
+        )
         return
 
     user_data[update.message.from_user.id] = {'url': url}
-    keyboard = [[InlineKeyboardButton("📹 Video", callback_data="video"),
-                 InlineKeyboardButton("🎵 Audio", callback_data="audio")]]
+    keyboard = [[
+        InlineKeyboardButton("📹 Video", callback_data="video"),
+        InlineKeyboardButton("🎵 Audio", callback_data="audio"),
+        InlineKeyboardButton("🖼️ Image", callback_data="image")
+    ]]
     await update.message.reply_text("✅ Link detected! Choose a format:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -146,8 +186,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await query.message.reply_text("📤 Uploading...")
         with open(file_path, 'rb') as f:
-            if choice == 'audio': await query.message.reply_audio(audio=f, title=title)
-            else: await query.message.reply_video(video=f, caption=title)
+            if choice == 'audio': 
+                await query.message.reply_audio(audio=f, title=title)
+            elif choice == 'image':
+                await query.message.reply_photo(photo=f, caption=title)
+            else: 
+                await query.message.reply_video(video=f, caption=title)
         os.remove(file_path)
     except Exception as e:
         await query.message.reply_text(f"❌ Upload error: {str(e)}")
