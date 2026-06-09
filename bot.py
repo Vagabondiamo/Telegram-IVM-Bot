@@ -283,7 +283,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = esc(update.effective_user.first_name or "there")
     await update.message.reply_text(
         f"👋 *Hey {name}\\!*\n\n"
-        r"🚀 *Social Downloader V3\.1* — your media grabber\." + "\n\n"
+        r"🚀 *Social Downloader * — your media grabber\." + "\n\n"
         "Just paste a link from any of these platforms:\n\n"
         "▶️  YouTube\n"
         "📸  Instagram\n"
