@@ -22,12 +22,12 @@
 | Platform | Video | Audio | Image |
 |----------|:-----:|:-----:|:-----:|
 | ▶️ YouTube | ✅ | ✅ | — |
-| 📸 Instagram | ✅ | — | ✅ |
-| 🎵 TikTok | ✅ | ✅ | — |
-| 📌 Pinterest | — | — | ✅ |
-| 🐦 Twitter / X | ✅ | — | ✅ |
-| 👥 Facebook | ✅ | — | — |
-| 🧵 Threads | ✅ | — | ✅ |
+| 📸 Instagram | ✅ | ✅ | ✅ |
+| 🎵 TikTok | ✅ | ✅ | ✅ |
+| 📌 Pinterest | ✅ | ✅| ✅ |
+| 🐦 Twitter / X | ✅ | ✅ | ✅ |
+| 👥 Facebook | ✅ | ✅ | ✅ |
+| 🧵 Threads | ✅ | ✅ | ✅ |
 | 🎧 Spotify | — | ✅ | — |
 
 ---
