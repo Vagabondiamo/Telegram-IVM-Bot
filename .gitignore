@@ -11,3 +11,4 @@ bot.log
 .vscode/
 cookies.txt
 downloads/
+.env
