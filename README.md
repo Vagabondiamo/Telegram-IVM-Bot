@@ -13,11 +13,11 @@
 | 🖼️ **Image** | Save original-quality images |
 | ⚡ **Fast delivery** | Sends via direct link when possible, uploads locally as fallback |
 | ❌ **Cancel anytime** | Inline cancel button before download starts |
-| 🌐 **Multi-platform** | YouTube, Instagram, TikTok, Pinterest, Twitter/X, Facebook, Threads, Spotify |
+| 🌐 **Multi-platform** | YouTube, Instagram, TikTok, Pinterest, Twitter/X, Facebook, Threads, Spotify... |
 
 ---
 
-## 🌐 Supported Platforms
+## 🌐 Principal Supported Platforms
 
 | Platform | Video | Audio | Image |
 |----------|:-----:|:-----:|:-----:|
