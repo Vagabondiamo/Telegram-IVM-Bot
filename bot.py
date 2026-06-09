@@ -55,63 +55,94 @@ def is_youtube(url):
     return "youtube.com" in url.lower() or "youtu.be" in url.lower()
 
 async def run_download_social(url: str, mode: str):
-    is_audio = (mode == 'audio')
-    is_image = (mode == 'image')
-    
-    opts = {
-        'outtmpl': f'{DOWNLOAD_DIR}/%(title)s.%(ext)s',
-        'quiet': True,
-        'no_warnings': True,
-        'nocheckcertificate': True,
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    # Map social media to preniv commands
+    cmd_map = {
+        'instagram': 'instagram',
+        'tiktok': 'tiktok',
+        'pinterest': 'pinterest',
+        'facebook': 'facebook',
+        'twitter': 'twitter',
+        'x.com': 'twitter',
+        'threads': 'threads',
+        'spotify': 'spotify',
+        'youtube': 'youtube',
+        'youtu.be': 'youtube'
     }
+    
+    selected_cmd = None
+    for key, val in cmd_map.items():
+        if key in url.lower():
+            selected_cmd = val
+            break
+    
+    if not selected_cmd:
+        return None, None, "Platform not supported by the new engine."
 
-    if is_audio:
-        opts['format'] = 'bestaudio/best'
-        opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}]
-    elif is_image:
-        opts['format'] = 'best'
-        opts['writethumbnail'] = True
-        opts['skip_download'] = True
-    else:
-        opts['format'] = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best'
+    # Prepare download directory
+    abs_download_dir = os.path.abspath(DOWNLOAD_DIR)
+    
+    # We'll use a unique subdirectory to easily find the file after download
+    import uuid
+    session_id = str(uuid.uuid4())[:8]
+    temp_dir = os.path.join(abs_download_dir, session_id)
+    os.makedirs(temp_dir, exist_ok=True)
+
+    # Command: node /home/zakaria/DVA/index.js <command> <url> -p <path>
+    # Note: prenivdlapp-cli is interactive by default if no command is given, 
+    # but here we use the direct subcommands.
+    command = [
+        "node", "/home/zakaria/DVA/index.js",
+        selected_cmd, url,
+        "-p", temp_dir
+    ]
 
     try:
-        loop = asyncio.get_event_loop()
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = await loop.run_in_executor(None, lambda: ydl.extract_info(url, download=not is_image))
-            
-            if is_image:
-                # Try to get the best thumbnail
-                thumbnails = info.get('thumbnails', [])
-                if not thumbnails:
-                    return None, None, "No image found for this link."
-                
-                # Sort thumbnails by preference (resolution/quality)
-                # Some sites provide 'url', some 'filepath'
-                best_thumb = thumbnails[-1]['url']
-                # We need to download this URL
-                async with httpx.AsyncClient() as client:
-                    resp = await client.get(best_thumb)
-                    if resp.status_code == 200:
-                        filename = f"{DOWNLOAD_DIR}/image_{info.get('id', 'temp')}.jpg"
-                        with open(filename, 'wb') as f:
-                            f.write(resp.content)
-                        return filename, info.get('title', 'Image'), None
-                    else:
-                        return None, None, f"Failed to download image: {resp.status_code}"
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        
+        if process.returncode != 0:
+            error_msg = stderr.decode().strip() or stdout.decode().strip()
+            return None, None, f"Download failed: {error_msg}"
 
-            filename = ydl.prepare_filename(info)
-            if is_audio: filename = os.path.splitext(filename)[0] + ".mp3"
-            
-            # Post-processing check for audio/video
-            if not os.path.exists(filename):
-                base = os.path.splitext(filename)[0]
-                for ext in ['.mp4', '.mkv', '.webm', '.mp3', '.jpg', '.png', '.webp']:
-                    if os.path.exists(base + ext):
-                        filename = base + ext
-                        break
-            return filename, info.get('title', 'Media'), None
+        # Find the downloaded file in temp_dir
+        files = os.listdir(temp_dir)
+        if not files:
+            return None, None, "Download finished but no file was found."
+
+        # Filter files by type if requested
+        # preniv usually downloads the "best" available or everything.
+        # We'll try to find the one that matches our mode.
+        final_file = None
+        if mode == 'audio':
+            # Look for mp3/m4a
+            for f in files:
+                if f.endswith(('.mp3', '.m4a', '.wav')):
+                    final_file = os.path.join(temp_dir, f)
+                    break
+        elif mode == 'image':
+            # Look for jpg/png/webp
+            for f in files:
+                if f.endswith(('.jpg', '.jpeg', '.png', '.webp', '.gif')):
+                    final_file = os.path.join(temp_dir, f)
+                    break
+        else:
+            # Video or generic: prefer mp4
+            for f in files:
+                if f.endswith('.mp4'):
+                    final_file = os.path.join(temp_dir, f)
+                    break
+            if not final_file:
+                final_file = os.path.join(temp_dir, files[0])
+
+        if not final_file:
+            return None, None, f"Could not find a matching file for {mode}."
+
+        return final_file, os.path.basename(final_file), None
+        
     except Exception as e:
         return None, None, str(e)
 
@@ -121,12 +152,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "📱 Social Downloader V3.1\n\n"
         "Paste a link from:\n"
+        "• YouTube\n"
         "• Instagram\n"
         "• TikTok\n"
         "• Pinterest\n"
         "• Twitter/X\n"
         "• Facebook\n\n"
-        "🔴 IMPORTANT: YouTube is NOT supported. 🔴\n"
         "Use /support for help or requests."
     )
 
@@ -137,8 +168,7 @@ async def support(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Click the button below to contact the owner for:\n"
         "• Reporting a problem\n"
         "• Requesting new features\n"
-        "• Feedback\n\n"
-        "⚠️ Remember: YouTube downloads are NOT available.",
+        "• Feedback",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -148,13 +178,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not url_match: return
 
     url = url_match.group()
-    if is_youtube(url):
-        await update.message.reply_text(
-            "❌ ERROR: YouTube downloads are strictly disabled on this bot.\n\n"
-            "Please use links from Instagram, TikTok, Pinterest, Twitter, or Facebook."
-        )
-        return
-
     user_data[update.message.from_user.id] = {'url': url}
     keyboard = [[
         InlineKeyboardButton("📹 Video", callback_data="video"),
@@ -192,10 +215,24 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.reply_photo(photo=f, caption=title)
             else: 
                 await query.message.reply_video(video=f, caption=title)
+        
+        # Cleanup: remove the file and its parent temp directory
+        temp_dir = os.path.dirname(file_path)
         os.remove(file_path)
+        if os.path.exists(temp_dir) and temp_dir.startswith(os.path.abspath(DOWNLOAD_DIR)):
+            # Remove any other files in the same session dir
+            for extra in os.listdir(temp_dir):
+                os.remove(os.path.join(temp_dir, extra))
+            os.rmdir(temp_dir)
+            
     except Exception as e:
         await query.message.reply_text(f"❌ Upload error: {str(e)}")
-        if os.path.exists(file_path): os.remove(file_path)
+        if os.path.exists(file_path):
+            temp_dir = os.path.dirname(file_path)
+            os.remove(file_path)
+            if os.path.exists(temp_dir) and temp_dir.startswith(os.path.abspath(DOWNLOAD_DIR)):
+                import shutil
+                shutil.rmtree(temp_dir)
 
 def main():
     threading.Thread(target=run_health_check, daemon=True).start()

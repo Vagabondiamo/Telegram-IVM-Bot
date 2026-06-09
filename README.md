@@ -1,13 +1,12 @@
 # 🤖 Telegram Download Bot
 
-A simple and powerful Telegram bot to download videos, audio, and images from social media (Instagram, TikTok, Pinterest, Twitter, etc.) using `yt-dlp`.
+A simple and powerful Telegram bot to download videos, audio, and images from social media (YouTube, Instagram, TikTok, Pinterest, Twitter, etc.) using `prenivdlapp-cli`.
 
 ## ✨ Features
-- ✅ **Multi-platform support**: Download from Instagram, TikTok, Pinterest, Twitter, Facebook, and more.
+- ✅ **Multi-platform support**: Download from YouTube, Instagram, TikTok, Pinterest, Twitter, Facebook, and more.
 - 📹 **Video, Audio & Image**: Choose between downloading the video, the audio (MP3), or images.
-- ⚡ **Fast**: Powered by `yt-dlp` for high-speed downloads.
+- ⚡ **Fast**: Powered by `prenivdlapp-cli` for high-speed downloads.
 - 🚀 **Free Deployment**: Ready to be deployed on Render.com or Heroku.
-- ❌ **No YouTube**: YouTube is **NOT supported** due to IP blocks and restrictions.
 
 ## 🛠️ Installation
 
