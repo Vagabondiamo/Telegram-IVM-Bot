@@ -120,6 +120,9 @@ MIT — free to use, modify, and deploy.
 
 ---
 
-Created by [@Vagabondiamo](https://github.com/Vagabondiamo)
-[@Vagabondiamo](https://t.me/vagabodiamo)
-[@VMDownbot](https://t.me/VMDownbot)
+Created by:
+[@Vagabondiamo](https://github.com/Vagabondiamo)
+
+[Telegram Profile](https://t.me/vagabodiamo)
+
+[Link Bot](https://t.me/VMDownbot)
