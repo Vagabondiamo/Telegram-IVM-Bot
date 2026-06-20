@@ -1,4 +1,4 @@
-# 📱 **Downloader IVM Boy**
+# 📱 **Downloader IVM Bot**
 
 > A Telegram bot to download videos, audio, and images from social media — fast, free, and ready to deploy.
 
