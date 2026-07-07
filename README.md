@@ -6,35 +6,35 @@
 
 ---
 
-## Features
+## ✨ Features
 
 | | |
 |---|---|
-| **Video** | Download up to 720p MP4 |
-| **Audio** | Extract MP3 at 192kbps |
-| **Image** | Save original-quality images |
-| **Fast delivery** | Sends via direct link when possible, uploads locally as fallback |
-| **Cancel anytime** | Inline cancel button before download starts |
-| **Multi-platform** | YouTube, Instagram, TikTok, Pinterest, Twitter/X, Facebook, Threads, Spotify... |
+| 📹 **Video** | Download up to 720p MP4 |
+| 🎵 **Audio** | Extract MP3 at 192kbps |
+| 🖼️ **Image** | Save original-quality images |
+| ⚡ **Fast delivery** | Sends via direct link when possible, uploads locally as fallback |
+| ❌ **Cancel anytime** | Inline cancel button before download starts |
+| 🌐 **Multi-platform** | YouTube, Instagram, TikTok, Pinterest, Twitter/X, Facebook, Threads, Spotify... |
 
 ---
 
-## Principal Supported Platforms
+## 🌐 Principal Supported Platforms
 
 | Platform | Video | Audio | Image |
 |----------|:-----:|:-----:|:-----:|
-| YouTube | ✅ | ✅ | — |
-| Instagram | ✅ | ✅ | ✅ |
-| TikTok | ✅ | ✅ | ✅ |
-| Pinterest | ✅ | ✅| ✅ |
-| Twitter / X | ✅ | ✅ | ✅ |
-| Facebook | ✅ | ✅ | ✅ |
-| Threads | ✅ | ✅ | ✅ |
-| Spotify | — | ✅ | — |
+| ▶️ YouTube | ✅ | ✅ | — |
+| 📸 Instagram | ✅ | ✅ | ✅ |
+| 🎵 TikTok | ✅ | ✅ | ✅ |
+| 📌 Pinterest | ✅ | ✅| ✅ |
+| 🐦 Twitter / X | ✅ | ✅ | ✅ |
+| 👥 Facebook | ✅ | ✅ | ✅ |
+| 🧵 Threads | ✅ | ✅ | ✅ |
+| 🎧 Spotify | — | ✅ | — |
 
 ---
 
-## Local Setup
+## 🛠️ Local Setup
 
 **Requirements:** Python 3.10+, `ffmpeg` installed on the system.
 
@@ -61,7 +61,7 @@ python bot.py
 
 ---
 
-## Deploy on Render.com
+## 🚀 Deploy on Render.com
 
 1. Fork this repository
 2. Go to [render.com](https://render.com) → **New Web Service**
@@ -78,7 +78,7 @@ python bot.py
 
 ---
 
-## How It Works
+## ⚙️ How It Works
 
 ```
 User sends a link
@@ -96,7 +96,7 @@ File delivered. Temp files cleaned up automatically.
 
 ---
 
-## Limits & Notes
+## ⚠️ Limits & Notes
 
 - **50MB Telegram limit** — files larger than 50MB cannot be sent by bots. The bot will notify you.
 - **Cookies** — place a `cookies.txt` file (Netscape format) in the project root to improve success rates on age-restricted or private content.
@@ -104,7 +104,7 @@ File delivered. Temp files cleaned up automatically.
 
 ---
 
-## Dependencies
+## 📦 Dependencies
 
 ```
 python-telegram-bot
@@ -115,7 +115,7 @@ python-dotenv
 
 ---
 
-## License
+## 📄 License
 
 MIT — free to use, modify, and deploy.
 
