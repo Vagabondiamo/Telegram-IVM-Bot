@@ -71,6 +71,13 @@ def esc(text: str) -> str:
     return re.sub(f'([{re.escape(reserved)}])', r'\\\1', str(text))
 
 
+def require_bot_token() -> str:
+    """Return BOT_TOKEN or fail with a clear startup error."""
+    if not BOT_TOKEN:
+        raise RuntimeError("BOT_TOKEN is missing. Set it in the environment or .env file.")
+    return BOT_TOKEN
+
+
 # ========== HEALTH CHECK FOR RENDER ==========
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -461,7 +468,7 @@ def main():
 
     app = (
         ApplicationBuilder()
-        .token(BOT_TOKEN)
+        .token(require_bot_token())
         .connect_timeout(60)
         .read_timeout(60)
         .write_timeout(120)

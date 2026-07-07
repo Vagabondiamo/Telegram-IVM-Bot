@@ -1,11 +1,13 @@
-# TELEGRAM VIDEO DOWNLOAD BOT - GUIDA COMPLETA
+# TELEGRAM SOCIAL DOWNLOADER BOT - GUIDA COMPLETA
 
-## COSA HO FATTO
+## CONTENUTO DEL PROGETTO
 
-Ho creato una cartella `telegram-download-bot` nella tua home contenente:
+La cartella contiene:
 
 1. **bot.py** - Il codice principale del bot
 2. **requirements.txt** - Le dipendenze Python necessarie
+3. **Dockerfile** e **Procfile** - File per il deploy
+4. **README.md** e **DEPLOY_GUIDE.txt** - Documentazione
 
 ---
 
@@ -19,14 +21,21 @@ Ho creato una cartella `telegram-download-bot` nella tua home contenente:
 5. **Copia il Token** che ti viene fornito (formato: `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`)
 
 ### Step 2: Inserisci il Token nel bot
-Apri il file `bot.py` e sostituisci questa riga:
-```python
-BOT_TOKEN = "INSERISCI_QUI_IL_TUO_TOKEN"
+Non inserire il token dentro `bot.py`.
+
+Usa una variabile ambiente:
+
+```bash
+export BOT_TOKEN="il_tuo_token"
 ```
-Con il tuo token reale:
-```python
-BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+
+In alternativa, crea un file `.env` locale con:
+
+```bash
+BOT_TOKEN=il_tuo_token
 ```
+
+Il file `.env` e' ignorato da Git.
 
 ### Step 3: Installa le dipendenze
 Apri un terminale e naviga nella cartella:
@@ -50,7 +59,7 @@ python3 bot.py
 
 ## PIATTAFORME SUPPORTATE
 
-Il bot supporta **1500+ siti** grazie a yt-dlp e gallery-dl:
+Il bot supporta principalmente:
 
 ✅ YouTube / YouTube Music
 ✅ Pinterest
@@ -58,11 +67,8 @@ Il bot supporta **1500+ siti** grazie a yt-dlp e gallery-dl:
 ✅ TikTok
 ✅ Twitter / X
 ✅ Facebook
-✅ Reddit
-✅ Vimeo
-✅ Dailymotion
-✅ SoundCloud
-✅ E molti altri...
+✅ Threads
+✅ Spotify audio
 
 ---
 
@@ -77,7 +83,7 @@ Il bot supporta **1500+ siti** grazie a yt-dlp e gallery-dl:
 ## COMANDI DEL BOT
 
 - `/start` - Avvia il bot
-- `/help` - Mostra l'aiuto
+- `/support` - Mostra il contatto di supporto
 
 ---
 
@@ -95,8 +101,11 @@ pip install yt-dlp
 
 ### Il bot non risponde
 - Verifica che il token sia corretto
-- Verifica che il bot sia avviato (terminale deve mostrare "Bot pronto!")
+- Verifica che la variabile `BOT_TOKEN` sia impostata
 - Riavvia il bot con Ctrl+C e di nuovo `python3 bot.py`
+
+### Errore "BOT_TOKEN is missing"
+Imposta `BOT_TOKEN` come variabile ambiente o nel file `.env`.
 
 ---
 
@@ -110,4 +119,4 @@ cd ~/telegram-download-bot && python3 bot.py
 ---
 
 Creato il: 2026-03-20
-Posizione: ~/telegram-download-bot/
+Posizione: Telegram-VM-Bot/

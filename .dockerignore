@@ -1,12 +1,9 @@
+.git
+.env
+venv/
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
 downloads/
 bot.log
-.vscode/
 cookies.txt
-.env
+tests/

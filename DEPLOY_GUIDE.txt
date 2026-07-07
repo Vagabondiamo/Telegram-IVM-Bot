@@ -28,7 +28,7 @@ Il codice è già pronto nella cartella `telegram-download-bot/`.
 1. Nel pannello Render, vai su "Environment"
 2. Aggiungi una variabile:
    - Key: `BOT_TOKEN`
-   - Value: `8671214452:AAHibVHglzUVRJW9EV32GMs46VOdiVpKGSs`
+   - Value: `il_token_generato_da_BotFather`
 
 3. Clicca "Deploy"
 
@@ -43,3 +43,7 @@ Dopo il deploy, il bot sarà online 24/7 gratuitamente!
 Il piano gratuito di Render mette il bot in sleep dopo 15 minuti di inattività. Al primo messaggio si "sveglia" in ~30 secondi.
 
 Se vuoi un bot sempre attivo, serve il piano a pagamento ($7/mese) oppure usa un altro servizio.
+
+## Sicurezza
+
+Non salvare mai il token Telegram nei file del repository. Se un token e' stato pubblicato o condiviso per errore, rigeneralo subito da @BotFather e aggiorna la variabile `BOT_TOKEN` su Render.
