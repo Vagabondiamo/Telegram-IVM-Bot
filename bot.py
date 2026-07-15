@@ -293,7 +293,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👋 *Hey {name}\\!*\n\n"
         r"🚀 *Social Downloader * — your media grabber\." + "\n\n"
         "Just paste a link from any of these platforms:\n\n"
-        "▶️  YouTube : **There are a few issues with YouTube; they will be resolved soon.**\n"
+        "▶️  YouTube : There are a few issues with YouTube; they will be resolved soon\n"
         "📸  Instagram\n"
         "🎵  TikTok\n"
         "📌  Pinterest\n"
