@@ -121,93 +121,121 @@ async def download_via_preniv(url: str, mode: str, temp_dir: str, session_id: st
     if not selected_api:
         return None, None, "This platform is not supported yet."
 
-    try:
-        async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
-            headers = {
-                'User-Agent': (
-                    'Mozilla/5.0 (Linux; Android 10; Mobile) '
-                    'AppleWebKit/537.36 (KHTML, like Gecko) '
-                    'Chrome/90.0.4430.210 Mobile Safari/537.36'
-                )
-            }
-            encoded_url = urllib.parse.quote(url, safe='')
-            resp = await client.get(f"{selected_api}{encoded_url}", headers=headers)
+    # Improved Preniv API call with retries, detailed logging and streamed download
+    max_attempts = 3
+    last_error = None
+    headers = {
+        'User-Agent': (
+            'Mozilla/5.0 (Linux; Android 10; Mobile) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/90.0.4430.210 Mobile Safari/537.36'
+        ),
+        'Accept': 'application/json, text/plain, */*'
+    }
 
-            if resp.status_code != 200:
-                return None, None, f"API returned status {resp.status_code}."
+    encoded_url = urllib.parse.quote(url, safe='')
+    for attempt in range(1, max_attempts + 1):
+        try:
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+                resp = await client.get(f"{selected_api}{encoded_url}", headers=headers)
 
-            data = resp.json()
-            if not (data.get('status') or data.get('success')) or 'data' not in data:
-                return None, None, f"API error: {data.get('message', 'Invalid response.')}"
+                if resp.status_code != 200:
+                    body_snippet = (await resp.aread())[:1000] if hasattr(resp, 'aread') else resp.text[:1000]
+                    logger.warning(f"Preniv API returned {resp.status_code} (attempt {attempt}/{max_attempts}): {body_snippet}")
+                    last_error = f"API returned {resp.status_code}: {body_snippet}"
+                    await asyncio.sleep(1 * attempt)
+                    continue
 
-            media_data = data['data']
-            media_url = None
+                try:
+                    data = resp.json()
+                except Exception as e:
+                    text_snippet = resp.text[:1000]
+                    logger.warning(f"Failed to parse JSON from Preniv (attempt {attempt}): {e}; body: {text_snippet}")
+                    last_error = f"Invalid JSON: {e}"
+                    await asyncio.sleep(1 * attempt)
+                    continue
 
-            downloads = media_data.get('downloads')
-            if isinstance(downloads, list) and downloads:
-                if mode == 'audio':
-                    media_url = next(
-                        (m['url'] for m in downloads if m.get('format') in ['MP3', 'M4A']),
-                        downloads[0]['url']
-                    )
-                elif mode == 'image':
-                    media_url = next(
-                        (m['url'] for m in downloads if m.get('format') in ['JPG', 'PNG', 'WEBP']),
-                        downloads[0]['url']
-                    )
-                else:
-                    media_url = next(
-                        (m['url'] for m in downloads if m.get('format') == 'MP4'),
-                        downloads[0]['url']
-                    )
-            elif isinstance(downloads, dict):
-                if mode == 'audio' and 'audio' in downloads:
-                    media_url = downloads['audio'][0]['url']
-                elif 'video' in downloads:
-                    media_url = downloads['video'][0]['url']
+                if not (data.get('status') or data.get('success')) or 'data' not in data:
+                    logger.warning(f"Preniv API returned invalid payload (attempt {attempt}): {data}")
+                    last_error = f"API error: {data.get('message', 'Invalid response.')}"
+                    await asyncio.sleep(1 * attempt)
+                    continue
 
-            if not media_url:
-                media_url = (
-                    media_data.get('url') or
-                    media_data.get('video') or
-                    media_data.get('image')
-                )
+                media_data = data['data']
+                media_url = None
 
-            if not media_url:
-                media_list = media_data.get('media', [])
-                if media_list:
+                downloads = media_data.get('downloads')
+                if isinstance(downloads, list) and downloads:
                     if mode == 'audio':
-                        media_url = next(
-                            (m['url'] for m in media_list if m.get('type') == 'audio'),
-                            media_list[0]['url']
-                        )
+                        media_url = next((m.get('url') for m in downloads if m.get('format') in ['MP3', 'M4A']), None)
                     elif mode == 'image':
-                        media_url = next(
-                            (m['url'] for m in media_list if m.get('type') == 'image'),
-                            media_list[0]['url']
-                        )
+                        media_url = next((m.get('url') for m in downloads if m.get('format') in ['JPG', 'PNG', 'WEBP']), None)
                     else:
-                        media_url = media_list[0]['url']
+                        media_url = next((m.get('url') for m in downloads if (m.get('format') or '').upper() == 'MP4'), None)
+                    if not media_url:
+                        media_url = downloads[0].get('url')
+                elif isinstance(downloads, dict):
+                    if mode == 'audio' and downloads.get('audio'):
+                        media_url = downloads['audio'][0].get('url')
+                    elif downloads.get('video'):
+                        media_url = downloads['video'][0].get('url')
 
-            if not media_url:
-                return None, None, "Could not extract a media link from the API response."
+                if not media_url:
+                    media_url = media_data.get('url') or media_data.get('video') or media_data.get('image')
 
-            file_resp = await client.get(media_url, headers=headers)
-            if file_resp.status_code == 200:
-                ext = 'mp4'
-                if mode == 'audio': ext = 'mp3'
-                elif mode == 'image': ext = 'jpg'
+                if not media_url:
+                    media_list = media_data.get('media', [])
+                    if media_list:
+                        if mode == 'audio':
+                            media_url = next((m.get('url') for m in media_list if m.get('type') == 'audio'), None)
+                        elif mode == 'image':
+                            media_url = next((m.get('url') for m in media_list if m.get('type') == 'image'), None)
+                        else:
+                            media_url = media_list[0].get('url')
 
-                filename = os.path.join(temp_dir, f"media_{session_id}.{ext}")
-                with open(filename, 'wb') as f:
-                    f.write(file_resp.content)
-                return filename, media_data.get('title', f"media_{session_id}"), media_url
-            else:
-                return None, None, f"File download failed (HTTP {file_resp.status_code})."
+                if not media_url:
+                    last_error = "Could not extract a media link from the API response."
+                    logger.warning(f"{last_error} Payload: {media_data}")
+                    await asyncio.sleep(1 * attempt)
+                    continue
 
-    except Exception as e:
-        return None, None, f"Request failed: {str(e)}"
+                # Stream the file to disk
+                try:
+                    stream_headers = headers.copy()
+                    # Some hosts require a Referer
+                    if 'youtube' in url.lower():
+                        stream_headers['Referer'] = 'https://www.youtube.com'
 
+                    async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as file_client:
+                        r = await file_client.get(media_url, headers=stream_headers)
+                        # Treat 200 OK and 206 Partial Content as successful downloads
+                        if r.status_code not in (200, 206):
+                            last_error = f"File download failed (HTTP {r.status_code})."
+                            logger.warning(f"{last_error} URL: {media_url}")
+                            await asyncio.sleep(1 * attempt)
+                            continue
+
+                        ext = 'mp4'
+                        if mode == 'audio': ext = 'mp3'
+                        elif mode == 'image': ext = 'jpg'
+
+                        filename = os.path.join(temp_dir, f"media_{session_id}.{ext}")
+                        with open(filename, 'wb') as f:
+                            f.write(r.content)
+
+                        return filename, media_data.get('title', f"media_{session_id}"), media_url
+                except Exception as e:
+                    last_error = f"File download exception: {e}"
+                    logger.warning(f"File download exception (attempt {attempt}): {e}")
+                    await asyncio.sleep(1 * attempt)
+                    continue
+        except Exception as e:
+            last_error = f"Request exception: {e}"
+            logger.warning(f"Preniv request exception (attempt {attempt}): {e}")
+            await asyncio.sleep(1 * attempt)
+            continue
+
+    return None, None, f"Request failed: {last_error or 'unknown'}"
 
 def is_youtube(url):
     return "youtube.com" in url.lower() or "youtu.be" in url.lower()
