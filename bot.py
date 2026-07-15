@@ -219,57 +219,66 @@ async def run_download_social(url: str, mode: str):
     temp_dir = os.path.join(abs_download_dir, session_id)
     os.makedirs(temp_dir, exist_ok=True)
 
-    # Prefer using yt-dlp for YouTube links; use Preniv API mainly for other platforms or images
-    use_api_directly = (mode == 'image')
+    # Control whether to prefer Preniv API via environment variable USE_PRENIV_API (default: true)
+    use_api_directly = os.environ.get('USE_PRENIV_API', 'true').lower() == 'true'
 
-    if not use_api_directly:
-        is_audio = (mode == 'audio')
-        opts = {
-            'outtmpl': f'{temp_dir}/%(title)s.%(ext)s',
-            'quiet': True,
-            'no_warnings': True,
-            'nocheckcertificate': True,
-            'user_agent': (
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                'AppleWebKit/537.36 (KHTML, like Gecko) '
-                'Chrome/122.0.0.0 Safari/537.36'
-            ),
-        }
-        if os.path.exists("cookies.txt"):
-            opts['cookiefile'] = 'cookies.txt'
-
-        if is_audio:
-            opts['format'] = 'bestaudio/best'
-            opts['postprocessors'] = [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192'
-            }]
+    # If preferring Preniv API, try it first and fall back to yt-dlp on failure
+    if use_api_directly:
+        filename, title, media_or_error = await download_via_preniv(url, mode, temp_dir, session_id)
+        if filename:
+            return filename, title, None
         else:
-            opts['format'] = 'bestvideo+bestaudio/best'
-            opts['merge_output_format'] = 'mp4'
+            logger.info(f"Preniv API failed or returned no file, falling back to yt-dlp: {media_or_error}")
 
-        try:
-            loop = asyncio.get_event_loop()
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = await loop.run_in_executor(None, lambda: ydl.extract_info(url, download=True))
-                filename = ydl.prepare_filename(info)
-                if is_audio:
-                    filename = os.path.splitext(filename)[0] + ".mp3"
+    # Attempt yt-dlp as a fallback or when API is not preferred
+    is_audio = (mode == 'audio')
+    opts = {
+        'outtmpl': f'{temp_dir}/%(title)s.%(ext)s',
+        'quiet': True,
+        'no_warnings': True,
+        'nocheckcertificate': True,
+        'user_agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/122.0.0.0 Safari/537.36'
+        ),
+    }
+    if os.path.exists("cookies.txt"):
+        opts['cookiefile'] = 'cookies.txt'
 
-                if not os.path.exists(filename):
-                    base = os.path.splitext(filename)[0]
-                    for ext in ['.mp4', '.mkv', '.webm', '.mp3']:
-                        if os.path.exists(base + ext):
-                            filename = base + ext
-                            break
+    if is_audio:
+        opts['format'] = 'bestaudio/best'
+        opts['postprocessors'] = [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192'
+        }]
+    else:
+        opts['format'] = 'bestvideo+bestaudio/best'
+        opts['merge_output_format'] = 'mp4'
 
-                if os.path.exists(filename):
-                    return filename, info.get('title', 'Media'), None
-        except Exception as e:
-            logger.info(f"yt-dlp failed, falling back to Preniv: {e}")
+    try:
+        loop = asyncio.get_event_loop()
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = await loop.run_in_executor(None, lambda: ydl.extract_info(url, download=True))
+            filename = ydl.prepare_filename(info)
+            if is_audio:
+                filename = os.path.splitext(filename)[0] + ".mp3"
 
-    return await download_via_preniv(url, mode, temp_dir, session_id)
+            if not os.path.exists(filename):
+                base = os.path.splitext(filename)[0]
+                for ext in ['.mp4', '.mkv', '.webm', '.mp3']:
+                    if os.path.exists(base + ext):
+                        filename = base + ext
+                        break
+
+            if os.path.exists(filename):
+                return filename, info.get('title', 'Media'), None
+    except Exception as e:
+        logger.info(f"yt-dlp failed: {e}")
+
+    # If everything failed, return the last error from Preniv (if any) or a generic message
+    return None, None, media_or_error if 'media_or_error' in locals() else 'Download failed.'
 
 
 # ========== HELPERS ==========
