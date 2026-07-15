@@ -122,7 +122,7 @@ async def download_via_preniv(url: str, mode: str, temp_dir: str, session_id: st
         return None, None, "This platform is not supported yet."
 
     try:
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
             headers = {
                 'User-Agent': (
                     'Mozilla/5.0 (Linux; Android 10; Mobile) '
@@ -219,7 +219,8 @@ async def run_download_social(url: str, mode: str):
     temp_dir = os.path.join(abs_download_dir, session_id)
     os.makedirs(temp_dir, exist_ok=True)
 
-    use_api_directly = is_youtube(url) or mode == 'image'
+    # Prefer using yt-dlp for YouTube links; use Preniv API mainly for other platforms or images
+    use_api_directly = (mode == 'image')
 
     if not use_api_directly:
         is_audio = (mode == 'audio')
@@ -245,10 +246,8 @@ async def run_download_social(url: str, mode: str):
                 'preferredquality': '192'
             }]
         else:
-            opts['format'] = (
-                'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]'
-                '/best[height<=720][ext=mp4]/best'
-            )
+            opts['format'] = 'bestvideo+bestaudio/best'
+            opts['merge_output_format'] = 'mp4'
 
         try:
             loop = asyncio.get_event_loop()
